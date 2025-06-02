@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Source Code Pro', monospace;
+            background-color: #000;
+            color: #00ff41;
+            margin: 0;
+            line-height: 1.5;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                to bottom,
+                transparent 0px,
+                transparent 1px,
+                rgba(0, 255, 65, 0.05) 1px,
+                rgba(0, 255, 65, 0.05) 2px
+            );
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.8;
+            animation: scanlineAnimation 8s linear infinite;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIW2NgYGBgAAAABQABh6FO1AAAAABJRU5ErkJggg==') repeat;
+            background-size: 2px 2px;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.05;
+        }
+
+        #vanta-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        #central-stage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        #boot-sequence {
+            font-size: 1.5em;
+            color: #00ff41;
+            text-shadow: 0 0 10px #00ff41;
+            opacity: 1;
+            transition: opacity 1s ease-out;
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+        }
+
+        #loading-services {
+            font-size: 1.1em;
+            color: #00ff41;
+            text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+            padding: 20px;
+            box-sizing: border-box;
+            display: none;
+        }
+
+        #loading-services p {
+            margin: 5px 0;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        #enter-pin-box {
+            text-align: center;
+            padding: 20px;
+            border: 1px solid #00ff41;
+            border-radius: 8px;
+            background-color: rgba(0, 0, 0, 0.7);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.5);
+            color: #00ff41;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            max-width: 400px;
+            width: 80%;
+            display: none;
+        }
+
+        #pin-prompt {
+            font-size: 1.8em;
+            text-shadow: 0 0 8px #00ff41;
+            margin-bottom: 10px;
+        }
+
+        #pin-input-display {
+            font-size: 2em;
+            letter-spacing: 5px;
+            min-height: 1.5em;
+            display: inline-block;
+        }
+
+        #main-content {
+            text-align: center;
+            padding: 20px;
+            border: 1px solid #00ff41;
+            border-radius: 8px;
+            background-color: rgba(0, 0, 0, 0.7);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.5);
+            color: #00ff41;
+            opacity: 0;
+            transition: opacity 1s ease-in;
+            max-width: 600px;
+            width: 90%;
+            display: none;
+        }
+
+        h1 {
+            color: #00ff41;
+            text-shadow: 0 0 8px #00ff41;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1.2em;
+            cursor: pointer;
+            background-color: transparent;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background-color: #00ff41;
+            color: #000;
+            box-shadow: 0 0 20px #00ff41, 0 0 30px rgba(0, 255, 65, 0.7);
+            transform: translateY(-3px);
+        }
+
+        .blink-cursor {
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            from, to { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        @keyframes scanlineAnimation {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 0% 100%; }
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.5em;
+            }
+            #boot-sequence {
+                font-size: 1.2em;
+            }
+            #loading-services {
+                font-size: 0.9em;
+                padding: 15px;
+            }
+            #enter-pin-box {
+                font-size: 0.9em;
+                padding: 15px;
+            }
+            #pin-prompt {
+                font-size: 1.5em;
+            }
+            #pin-input-display {
+                font-size: 1.8em;
+                letter-spacing: 3px;
+            }
+            button {
+                font-size: 1em;
+                padding: 8px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="vanta-background"></div> <div id="central-stage">
+        <div id="boot-sequence">
+            <span id="boot-text"></span><span class="blink-cursor">_</span>
+        </div>
+
+        <div id="loading-services"></div>
+
+        <div id="enter-pin-box">
+            <h2 id="pin-prompt"></h2>
+            <p id="pin-input-display"></p>
+            </div>
+
+        <div id="main-content">
+            <h1 id="welcome-text"></h1>
+            <button onclick="location.href='portfolio.html'">Enter</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            VANTA.NET({
+                el: "#vanta-background",
+                mouseControls: true,
+                touchControls: true,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                scale: 1.00,
+                scaleMobile: 1.00,
+                color: 0x3fff3f,
+                backgroundColor: 0x000000
+            });
+
+            const bootSequenceDiv = document.getElementById('boot-sequence');
+            const bootTextSpan = document.getElementById('boot-text');
+            const loadingServicesDiv = document.getElementById('loading-services');
+            const enterPinBoxDiv = document.getElementById('enter-pin-box');
+            const pinPromptH2 = document.getElementById('pin-prompt');
+            const pinInputDisplayP = document.getElementById('pin-input-display');
+            const mainContentDiv = document.getElementById('main-content');
+            const welcomeTextH1 = document.getElementById('welcome-text');
+
+            const bootMessage = "_BOOTING_SYSTEM_..._";
+            const welcomeMessage = "// ACCESSING_PORTFOLIO //";
+            const loadingServices = [
+                "[ OK ] Initializing Secure Shell...",
+                "[ OK ] Loading Cryptographic Modules...",
+                "[ OK ] Starting Network Protocols...",
+                "[ OK ] Verifying System Integrity...",
+                "[ OK ] Establishing Encrypted Connection...",
+                "[ OK ] Accessing User Credentials...",
+                "[ OK ] Launching Interface Daemon...",
+		"[ OK ] Hacking The Mainframe...",
+                "[ OK ] System Ready."
+            ];
+            const pinPromptMessage = "ENTER PIN";
+            const pinAsterisks = "******";
+
+            const typingSpeed = 70;
+            const serviceTypingSpeed = 20;
+            const pinPromptTypingSpeed = 80;
+            const asteriskTypingSpeed = 150;
+
+            const delayAfterBoot = 1000;
+            const delayBeforeServiceType = 500;
+            const delayAfterAllServices = 800;
+            const delayAfterPinPromptTyped = 500;
+            const delayAfterAsterisksTyped = 1000;
+            const delayBeforeWelcomeType = 500;
+
+            let globalCharIndex = 0;
+
+            function typeMessage(element, message, speed, callback, startIndex = 0) {
+                let localCharIndex = startIndex;
+                function typeChar() {
+                    if (localCharIndex < message.length) {
+                        element.textContent += message.charAt(localCharIndex);
+                        localCharIndex++;
+                        setTimeout(typeChar, speed);
+                    } else {
+                        if (callback) {
+                            callback();
+                        }
+                    }
+                }
+                typeChar();
+            }
+
+            function typeServiceMessages(messages, container, index, callback) {
+                if (index < messages.length) {
+                    const p = document.createElement('p');
+                    container.appendChild(p);
+                    let currentServiceCharIndex = 0;
+
+                    function typeCurrentServiceLine() {
+                        if (currentServiceCharIndex < messages[index].length) {
+                            p.textContent += messages[index].charAt(currentServiceCharIndex);
+                            currentServiceCharIndex++;
+                            setTimeout(typeCurrentServiceLine, serviceTypingSpeed);
+                        } else {
+                            setTimeout(() => typeServiceMessages(messages, container, index + 1, callback), 100);
+                        }
+                    }
+                    typeCurrentServiceLine();
+                } else {
+                    if (callback) {
+                        callback();
+                    }
+                }
+            }
+
+            function typePinScreen(callback) {
+                let pinPromptCharIndex = 0;
+                let asteriskCharIndex = 0;
+
+                function typePinPrompt() {
+                    if (pinPromptCharIndex < pinPromptMessage.length) {
+                        pinPromptH2.textContent += pinPromptMessage.charAt(pinPromptCharIndex);
+                        pinPromptCharIndex++;
+                        setTimeout(typePinPrompt, pinPromptTypingSpeed);
+                    } else {
+                        setTimeout(typeAsterisks, delayAfterPinPromptTyped);
+                    }
+                }
+
+                function typeAsterisks() {
+                    if (asteriskCharIndex < pinAsterisks.length) {
+                        pinInputDisplayP.textContent += pinAsterisks.charAt(asteriskCharIndex);
+                        asteriskCharIndex++;
+                        setTimeout(typeAsterisks, asteriskTypingSpeed);
+                    } else {
+                        setTimeout(callback, delayAfterAsterisksTyped);
+                    }
+                }
+
+                typePinPrompt();
+            }
+
+            typeMessage(bootTextSpan, bootMessage, typingSpeed, () => {
+                setTimeout(() => {
+                    bootSequenceDiv.style.opacity = '0';
+                    setTimeout(() => {
+                        bootSequenceDiv.style.display = 'none';
+                        loadingServicesDiv.style.display = 'block';
+                        loadingServicesDiv.style.opacity = '1';
+                        setTimeout(() => {
+                            typeServiceMessages(loadingServices, loadingServicesDiv, 0, () => {
+                                setTimeout(() => {
+                                    loadingServicesDiv.style.opacity = '0';
+                                    setTimeout(() => {
+                                        loadingServicesDiv.style.display = 'none';
+                                        enterPinBoxDiv.style.display = 'block';
+                                        enterPinBoxDiv.style.opacity = '1';
+                                        typePinScreen(() => {
+                                            enterPinBoxDiv.style.opacity = '0';
+                                            setTimeout(() => {
+                                                enterPinBoxDiv.style.display = 'none';
+                                                mainContentDiv.style.display = 'block';
+                                                mainContentDiv.style.opacity = '1';
+                                                setTimeout(() => {
+                                                    globalCharIndex = 0;
+                                                    typeMessage(welcomeTextH1, welcomeMessage, typingSpeed);
+                                                }, delayBeforeWelcomeType);
+                                            }, 1000);
+                                        });
+                                    }, 1000); // Delay before PIN box transition completes
+                                }, delayAfterAllServices);
+                            });
+                        }, delayBeforeServiceType);
+                    }, 1000); // Delay before boot sequence fully hides
+                }, delayAfterBoot);
+            });
+        });
+    </script>
+</body>
+</html>

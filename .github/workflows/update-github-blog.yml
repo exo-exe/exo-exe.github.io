@@ -1,0 +1,47 @@
+name: Update GitHub Blog
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:   
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout the repo (no credentials yet)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # We'll push with our own token
+
+      # 2️⃣ Set up Node.js (used by the script)
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 3️⃣ Install Prettier (optional, just for tidy HTML)
+      - name: Install dev deps
+        run: npm install prettier@latest --save-dev
+
+      # 4️⃣ Run the generator script
+      - name: Generate blog cards from GitHub repos
+        env:
+          GITHUB_USER: exo-exe                       
+        run: |
+          node ./scripts/update-github-blog.js
+
+      # 5️⃣ Commit & push any changes
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git add .
+            git commit -m "🤖 Auto‑update GitHub blog cards"
+            git push origin HEAD:${{ github.ref_name }}
+          else
+            echo "No changes detected."
+          fi

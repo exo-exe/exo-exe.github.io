@@ -8,9 +8,17 @@ on:
 jobs:
   update:
     runs-on: ubuntu-latest
+    # --------------------------------------------------------------
+    # IMPORTANT: give the job write permission on the repo.
+    # If you have a global `permissions:` block that restricts
+    # access, make sure this job (or the whole workflow) includes:
+    # --------------------------------------------------------------
+    permissions:
+      contents: write          # allows the GITHUB_TOKEN to push
+
     steps:
       # --------------------------------------------------------------
-      # 1️⃣ Checkout the repository (no credentials yet)
+      # 1️⃣ Checkout the repository (without persisting the default token)
       # --------------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -18,7 +26,7 @@ jobs:
           persist-credentials: false   # we’ll push with our own token
 
       # --------------------------------------------------------------
-      # 2️⃣ Set up Node.js (cache only if a lock file exists)
+      # 2️⃣ Set up Node.js (enable cache only if a lock file exists)
       # --------------------------------------------------------------
       - name: Set up Node.js
         id: node-setup
@@ -35,7 +43,7 @@ jobs:
         run: |
           if [ -f package-lock.json ]; then
             echo "🔧 npm lock detected – installing with npm ci"
-            npm ci                         # respects package-lock.json
+            npm ci                     # respects package-lock.json
           elif [ -f yarn.lock ]; then
             echo "🔧 Yarn lock detected – installing with Yarn"
             yarn install --frozen-lockfile
@@ -45,37 +53,39 @@ jobs:
           fi
 
       # --------------------------------------------------------------
-      # 4️⃣ Run the script that updates the HTML page
+      # 4️⃣ Run your script that updates the HTML page
       # --------------------------------------------------------------
       - name: Generate blog cards
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # optional, only if script calls the GitHub API
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # optional, only if script talks to GitHub API
           GITHUB_USER: exo-exe                    # replace with your user/org
         run: node ./scripts/update-github-blog.js
 
       # --------------------------------------------------------------
-      # 5️⃣ Commit and push the changes (authenticated)
+      # 5️⃣ Commit and **push** the changes – authenticated!
       # --------------------------------------------------------------
       - name: Commit and push changes
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # <-- the magic token
         run: |
-          # Configure the bot identity (the name/email are optional)
+          # Configure the bot identity (optional, just for nice commit metadata)
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           # Stage only tracked files that changed
           git add -u
 
-          # If nothing changed, stop here
+          # If nothing changed, exit cleanly
           if git diff --cached --quiet; then
             echo "✅ No changes to commit."
             exit 0
           fi
 
-          # Commit with a clear message
+          # Commit
           git commit -m "🤖 Auto‑update GitHub blog cards"
 
-          # Push using the built‑in token – no interactive password prompt
+          # Push using the token embedded in the URL.
+          # ${GITHUB_ACTOR} = the user that triggered the workflow (usually the bot)
+          # ${GITHUB_TOKEN} = the secret that grants write access for this run
           git push "https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
             HEAD:${{ github.ref_name }}

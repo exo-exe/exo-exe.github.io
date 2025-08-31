@@ -1,68 +1,71 @@
 name: Update GitHub Blog
 
 on:
-  workflow_dispatch:          # manual trigger from the Actions tab
+  workflow_dispatch:
   schedule:
-    - cron: '0 2 * * *'      # optional nightly run (02:00 UTC)
+    - cron: '0 2 * * *'   # optional nightly run
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      # ------------------------------------------------------------------
-      # 1️⃣ Checkout the repo – we turn off the default credential handling
-      # ------------------------------------------------------------------
+      # --------------------------------------------------------------
+      # 1️⃣ Checkout the repo (no credentials yet)
+      # --------------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false   # we’ll push with our own token
+          persist-credentials: false
 
       # --------------------------------------------------------------
-      # 2️⃣ Set up Node.js (install only what you need)
+      # 2️⃣ Set up Node – enable cache only if a lock file exists
       # --------------------------------------------------------------
       - name: Set up Node.js
+        id: node-setup
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'                 # speeds up subsequent runs
+          # Detect lock file presence; if none, disable cache
+          cache: ${{ (hashFiles('package-lock.json') != '' || hashFiles('yarn.lock') != '' ) && 'npm' || '' }}
 
       # --------------------------------------------------------------
-      # 3️⃣ Install production dependencies (no dev deps, no node_modules in repo)
+      # 3️⃣ Install dependencies (npm or Yarn) – works both ways
       # --------------------------------------------------------------
       - name: Install dependencies
-        run: npm ci --omit=dev          # installs exactly what's in package-lock.json
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "🔧 Detected npm lock file – installing with npm"
+            npm ci                     # respects package-lock.json
+          elif [ -f yarn.lock ]; then
+            echo "🔧 Detected Yarn lock file – installing with Yarn"
+            yarn install --frozen-lockfile
+          else
+            echo "⚠️ No lock file – installing required packages only"
+            npm install prettier --no-package-lock
+          fi
 
       # --------------------------------------------------------------
-      # 4️⃣ Run the script that updates the HTML file
+      # 4️⃣ Run your script that updates the HTML page
       # --------------------------------------------------------------
       - name: Generate blog cards
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # optional – only needed if your script calls the GitHub API
-          GITHUB_USER: exo-exe                    # replace with your user/org
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # optional, only if script talks to GitHub API
+          GITHUB_USER: exo-exe
         run: node ./scripts/update-github-blog.js
 
       # --------------------------------------------------------------
-      # 5️⃣ Commit ONLY the changed files (typically the HTML + lockfile)
+      # 5️⃣ Commit & push (uses built‑in GITHUB_TOKEN)
       # --------------------------------------------------------------
       - name: Commit and push changes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Configure the bot identity (you can keep the default bot name/email)
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # Stage *only* files that actually changed
           git add -u
-
-          # If nothing changed, exit gracefully
           if git diff --cached --quiet; then
             echo "✅ No changes to commit."
             exit 0
           fi
-
-          # Commit with a clear message
           git commit -m "🤖 Auto‑update GitHub blog cards"
-
-          # Push using the built‑in token (no password prompt)
           git push "https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:${{ github.ref_name }}

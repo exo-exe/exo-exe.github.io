@@ -1,31 +1,31 @@
 name: Update GitHub Blog
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:          # manual trigger from the Actions tab
   schedule:
-    - cron: '0 2 * * *'   # optional nightly run
+    - cron: '0 2 * * *'      # optional nightly run (02:00 UTC)
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
       # --------------------------------------------------------------
-      # 1️⃣ Checkout the repo (no credentials yet)
+      # 1️⃣ Checkout the repository (no credentials yet)
       # --------------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          persist-credentials: false   # we’ll push with our own token
 
       # --------------------------------------------------------------
-      # 2️⃣ Set up Node – enable cache only if a lock file exists
+      # 2️⃣ Set up Node.js (cache only if a lock file exists)
       # --------------------------------------------------------------
       - name: Set up Node.js
         id: node-setup
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          # Detect lock file presence; if none, disable cache
+          # Enable npm cache only when a lock file is present
           cache: ${{ (hashFiles('package-lock.json') != '' || hashFiles('yarn.lock') != '' ) && 'npm' || '' }}
 
       # --------------------------------------------------------------
@@ -34,10 +34,10 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then
-            echo "🔧 Detected npm lock file – installing with npm"
-            npm ci                     # respects package-lock.json
+            echo "🔧 npm lock detected – installing with npm ci"
+            npm ci                         # respects package-lock.json
           elif [ -f yarn.lock ]; then
-            echo "🔧 Detected Yarn lock file – installing with Yarn"
+            echo "🔧 Yarn lock detected – installing with Yarn"
             yarn install --frozen-lockfile
           else
             echo "⚠️ No lock file – installing required packages only"
@@ -45,27 +45,4 @@ jobs:
           fi
 
       # --------------------------------------------------------------
-      # 4️⃣ Run your script that updates the HTML page
-      # --------------------------------------------------------------
-      - name: Generate blog cards
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # optional, only if script talks to GitHub API
-          GITHUB_USER: exo-exe
-        run: node ./scripts/update-github-blog.js
-
-      # --------------------------------------------------------------
-      # 5️⃣ Commit & push (uses built‑in GITHUB_TOKEN)
-      # --------------------------------------------------------------
-      - name: Commit and push changes
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -u
-          if git diff --cached --quiet; then
-            echo "✅ No changes to commit."
-            exit 0
-          fi
-          git commit -m "🤖 Auto‑update GitHub blog cards"
-          git push "https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:${{ github.ref_name }}
+      # 4️⃣ Run the script that updates the H

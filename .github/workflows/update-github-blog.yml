@@ -45,4 +45,37 @@ jobs:
           fi
 
       # --------------------------------------------------------------
-      # 4️⃣ Run the script that updates the H
+      # 4️⃣ Run the script that updates the HTML page
+      # --------------------------------------------------------------
+      - name: Generate blog cards
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # optional, only if script calls the GitHub API
+          GITHUB_USER: exo-exe                    # replace with your user/org
+        run: node ./scripts/update-github-blog.js
+
+      # --------------------------------------------------------------
+      # 5️⃣ Commit and push the changes (authenticated)
+      # --------------------------------------------------------------
+      - name: Commit and push changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Configure the bot identity (the name/email are optional)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Stage only tracked files that changed
+          git add -u
+
+          # If nothing changed, stop here
+          if git diff --cached --quiet; then
+            echo "✅ No changes to commit."
+            exit 0
+          fi
+
+          # Commit with a clear message
+          git commit -m "🤖 Auto‑update GitHub blog cards"
+
+          # Push using the built‑in token – no interactive password prompt
+          git push "https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            HEAD:${{ github.ref_name }}

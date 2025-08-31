@@ -1,47 +1,68 @@
 name: Update GitHub Blog
 
 on:
+  workflow_dispatch:          # manual trigger from the Actions tab
   schedule:
-    - cron: '0 2 * * *'
-  workflow_dispatch:   
+    - cron: '0 2 * * *'      # optional nightly run (02:00 UTC)
 
 jobs:
-  build:
+  update:
     runs-on: ubuntu-latest
-
     steps:
-      # 1️⃣ Checkout the repo (no credentials yet)
+      # ------------------------------------------------------------------
+      # 1️⃣ Checkout the repo – we turn off the default credential handling
+      # ------------------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false   # We'll push with our own token
+          persist-credentials: false   # we’ll push with our own token
 
-      # 2️⃣ Set up Node.js (used by the script)
+      # --------------------------------------------------------------
+      # 2️⃣ Set up Node.js (install only what you need)
+      # --------------------------------------------------------------
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'                 # speeds up subsequent runs
 
-      # 3️⃣ Install Prettier (optional, just for tidy HTML)
-      - name: Install dev deps
-        run: npm install prettier@latest --save-dev
+      # --------------------------------------------------------------
+      # 3️⃣ Install production dependencies (no dev deps, no node_modules in repo)
+      # --------------------------------------------------------------
+      - name: Install dependencies
+        run: npm ci --omit=dev          # installs exactly what's in package-lock.json
 
-      # 4️⃣ Run the generator script
-      - name: Generate blog cards from GitHub repos
+      # --------------------------------------------------------------
+      # 4️⃣ Run the script that updates the HTML file
+      # --------------------------------------------------------------
+      - name: Generate blog cards
         env:
-          GITHUB_USER: exo-exe                       
-        run: |
-          node ./scripts/update-github-blog.js
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # optional – only needed if your script calls the GitHub API
+          GITHUB_USER: exo-exe                    # replace with your user/org
+        run: node ./scripts/update-github-blog.js
 
-      # 5️⃣ Commit & push any changes
-      - name: Commit changes
+      # --------------------------------------------------------------
+      # 5️⃣ Commit ONLY the changed files (typically the HTML + lockfile)
+      # --------------------------------------------------------------
+      - name: Commit and push changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Configure the bot identity (you can keep the default bot name/email)
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if [[ -n "$(git status --porcelain)" ]]; then
-            git add .
-            git commit -m "🤖 Auto‑update GitHub blog cards"
-            git push origin HEAD:${{ github.ref_name }}
-          else
-            echo "No changes detected."
+
+          # Stage *only* files that actually changed
+          git add -u
+
+          # If nothing changed, exit gracefully
+          if git diff --cached --quiet; then
+            echo "✅ No changes to commit."
+            exit 0
           fi
+
+          # Commit with a clear message
+          git commit -m "🤖 Auto‑update GitHub blog cards"
+
+          # Push using the built‑in token (no password prompt)
+          git push "https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:${{ github.ref_name }}

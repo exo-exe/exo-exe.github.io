@@ -1,44 +1,32 @@
 name: Update GitHub Blog
 
 on:
-  workflow_dispatch:          # manual trigger from the Actions tab
+  workflow_dispatch:          
   schedule:
-    - cron: '0 2 * * *'      # optional nightly run (02:00 UTC)
+    - cron: '0 2 * * *'      
 
 jobs:
   update:
     runs-on: ubuntu-latest
-    # --------------------------------------------------------------
-    # IMPORTANT: give the job write permission on the repo.
-    # If you have a global `permissions:` block that restricts
-    # access, make sure this job (or the whole workflow) includes:
-    # --------------------------------------------------------------
+
     permissions:
-      contents: write          # allows the GITHUB_TOKEN to push
+      contents: write          
 
     steps:
-      # --------------------------------------------------------------
-      # 1️⃣ Checkout the repository (without persisting the default token)
-      # --------------------------------------------------------------
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false   # we’ll push with our own token
+          persist-credentials: false   
 
-      # --------------------------------------------------------------
-      # 2️⃣ Set up Node.js (enable cache only if a lock file exists)
-      # --------------------------------------------------------------
+
       - name: Set up Node.js
         id: node-setup
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          # Enable npm cache only when a lock file is present
           cache: ${{ (hashFiles('package-lock.json') != '' || hashFiles('yarn.lock') != '' ) && 'npm' || '' }}
 
-      # --------------------------------------------------------------
-      # 3️⃣ Install dependencies (npm or Yarn) – works both ways
-      # --------------------------------------------------------------
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then
@@ -52,21 +40,17 @@ jobs:
             npm install prettier --no-package-lock
           fi
 
-      # --------------------------------------------------------------
-      # 4️⃣ Run your script that updates the HTML page
-      # --------------------------------------------------------------
+
       - name: Generate blog cards
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # optional, only if script talks to GitHub API
-          GITHUB_USER: exo-exe                    # replace with your user/org
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   
+          GITHUB_USER: exo-exe                    
         run: node ./scripts/update-github-blog.js
 
-      # --------------------------------------------------------------
-      # 5️⃣ Commit and **push** the changes – authenticated!
-      # --------------------------------------------------------------
+
       - name: Commit and push changes
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # <-- the magic token
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
         run: |
           # Configure the bot identity (optional, just for nice commit metadata)
           git config user.name "github-actions[bot]"
